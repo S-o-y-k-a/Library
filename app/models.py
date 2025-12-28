@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float
 from sqlalchemy.orm import declarative_base, relationship
 from app.db import Base
 
@@ -9,6 +9,7 @@ class Book(Base):
     name = Column(String, index=True)
     author = Column(String, index=True)
     theme = Column(String)
+    rating = Column(Float) #новая колонка для миграции
     publisher = Column(String)
     issuances = relationship("Issuance", back_populates="book")
 
