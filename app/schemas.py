@@ -1,11 +1,15 @@
 from pydantic import BaseModel
 from datetime import date
+from typing import Optional
+from typing import Dict
+from typing import Any
 
 class BookIn(BaseModel):
     name: str
     author: str
     theme: str
     publisher: str
+    rating: Optional[float] = None
 
 
 class BookOut(BookIn):
@@ -34,6 +38,7 @@ class IssuanceIn(BaseModel):
     date_of_actual_return: date
     book_id: int
     reader_id: int
+    notes: Dict[str, Any]
 
 class IssuanceOut(IssuanceIn):
     issuance_id: int

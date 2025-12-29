@@ -214,9 +214,7 @@ def search_books(author: str = None, theme: str = None, db: Session = Depends(ge
 @app.get("/issuances_with_readers/")
 def get_issuances_with_readers(db: Session = Depends(get_db)):
     res = (
-        db.query(Issuance, Reader)
-        .join(Reader, Issuance.reader_id == Reader.reader_id)
-        .all()
+        db.query(Issuance, Reader).join(Reader, Issuance.reader_id == Reader.reader_id).all()
     )
 
     output = []
@@ -240,9 +238,7 @@ def get_issuances_with_readers(db: Session = Depends(get_db)):
 @app.put("/books/update_even_rating/")
 def update_even_book_rating(db: Session = Depends(get_db)):
     updated_count = (
-        db.query(Book)
-        .filter(Book.book_id % 2 == 0)
-        .update({"rating": random.uniform(0.0, 10.0)})
+        db.query(Book).filter(Book.book_id % 2 == 0).update({"rating": random.uniform(0.0, 10.0)})
     )
 
     db.commit()
@@ -255,15 +251,22 @@ def update_even_book_rating(db: Session = Depends(get_db)):
 def group_books_by_rounded_rating(db: Session = Depends(get_db)):
     res = (
         db.query(
-            func.floor(Book.rating).label("rounded_rating"),
-            func.count(Book.book_id).label("book_count")
+            func.floor(Book.rating),
+            func.count(Book.book_id)
         )
-        .filter(Book.rating != None)
-        .group_by(func.floor(Book.rating))
-        .all()
+        .filter(Book.rating != None).group_by(func.floor(Book.rating)).all()
     )
 
     return [
         {"rounded_rating": int(rating), "book_count": count}
         for rating, count in res
     ]
+
+
+#регексп поиск по jsonb полю (его str части)
+@app.get("/issuances/search_regexp/", response_model=List[IssuanceOut])
+def search_issuances_by_notes_ilike(search_string: str, db: Session = Depends(get_db)):
+    query = db.query(Issuance).filter(
+        Issuance.notes["review"].astext.ilike(f"%{search_string}%")
+    )
+    return query.all()

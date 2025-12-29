@@ -2,6 +2,7 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float
 from sqlalchemy.orm import declarative_base, relationship
 from app.db import Base
+from sqlalchemy.dialects.postgresql import JSONB
 
 class Book(Base):
     __tablename__ = "book"
@@ -33,3 +34,4 @@ class Issuance(Base):
     reader_id = Column(Integer, ForeignKey("reader.reader_id"))
     book = relationship("Book", back_populates="issuances")
     reader = relationship("Reader", back_populates="issuances")
+    notes = Column(JSONB) #jsonb колонка
