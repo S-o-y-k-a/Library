@@ -8,6 +8,7 @@ from app.schemas import BookIn, BookOut, ReaderIn, ReaderOut, IssuanceIn, Issuan
 import random
 from typing import List
 from sqlalchemy import asc
+from fastapi import Query
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,7 +34,7 @@ def create_book(book: BookIn, db: Session = Depends(get_db)):
 
 
 @app.get("/books/", response_model=List[BookOut])
-def read_books(sort_by: str = "book_id", db: Session = Depends(get_db)
+def read_books(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), sort_by: str = "book_id", db: Session = Depends(get_db)
 ):
     sorts = {
         "book_id": Book.book_id,
@@ -51,7 +52,7 @@ def read_books(sort_by: str = "book_id", db: Session = Depends(get_db)
         )
 
     s = sorts[sort_by]
-    query = db.query(Book).order_by(asc(s))
+    query = db.query(Book).order_by(asc(s)).limit(limit).offset(offset)
 
     return query.all()
 
@@ -90,7 +91,7 @@ def create_reader(reader: ReaderIn, db: Session = Depends(get_db)):
 
 
 @app.get("/readers/", response_model=List[ReaderOut])
-def read_readers(sort_by: str = "reader_id", db: Session = Depends(get_db)):
+def read_readers(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), sort_by: str = "reader_id", db: Session = Depends(get_db)):
 
     sorts = {
         "reader_id": Reader.reader_id,
@@ -108,7 +109,7 @@ def read_readers(sort_by: str = "reader_id", db: Session = Depends(get_db)):
         )
 
     s = sorts[sort_by]
-    query = db.query(Reader).order_by(asc(s))
+    query = db.query(Reader).order_by(asc(s)).limit(limit).offset(offset)
 
     return query.all()
 
@@ -148,7 +149,7 @@ def create_issuance(issuance: IssuanceIn, db: Session = Depends(get_db)):
 
 
 @app.get("/issuances/", response_model=List[IssuanceOut])
-def read_issuances(sort_by: str = "issuance_id", db: Session = Depends(get_db)):
+def read_issuances(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), sort_by: str = "issuance_id", db: Session = Depends(get_db)):
     sorts = {
         "issuance_id": Issuance.issuance_id,
         "issuance_date": Issuance.issuance_date,
@@ -162,7 +163,7 @@ def read_issuances(sort_by: str = "issuance_id", db: Session = Depends(get_db)):
         )
 
     s = sorts[sort_by]
-    query = db.query(Issuance).order_by(asc(s))
+    query = db.query(Issuance).order_by(asc(s)).limit(limit).offset(offset)
 
     return query.all()
 
@@ -195,7 +196,7 @@ def delete_issuance(issuance_id: int, db: Session = Depends(get_db)):
 
 #select all books with given author and theme
 @app.get("/books/search_author_and_theme/", response_model=List[BookOut])
-def search_books(author: str = None, theme: str = None, db: Session = Depends(get_db)):
+def search_books(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), author: str = None, theme: str = None, db: Session = Depends(get_db)):
     query = db.query(Book)
 
     if author:
@@ -203,19 +204,17 @@ def search_books(author: str = None, theme: str = None, db: Session = Depends(ge
     if theme:
         query = query.filter(Book.theme == theme)
 
-    books = query.all()
+    books = query.limit(limit).offset(offset).all()
     if not books:
-        raise HTTPException(status_code=404, detail="Books not found")
+        raise HTTPException(status_code=404, detail="Such a book doesn't exist in database")
 
     return books
 
 
 #join (вывести все выдачи с указанием читателя)
 @app.get("/issuances_with_readers/")
-def get_issuances_with_readers(db: Session = Depends(get_db)):
-    res = (
-        db.query(Issuance, Reader).join(Reader, Issuance.reader_id == Reader.reader_id).all()
-    )
+def get_issuances_with_readers(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    res = db.query(Issuance, Reader).join(Reader, Issuance.reader_id == Reader.reader_id).limit(limit).offset(offset).all()
 
     output = []
     for issuance, reader in res:
@@ -237,9 +236,7 @@ def get_issuances_with_readers(db: Session = Depends(get_db)):
 #Сложно придумать что-то более осмысленное, когда данные в таблице рандомные...
 @app.put("/books/update_even_rating/")
 def update_even_book_rating(db: Session = Depends(get_db)):
-    updated_count = (
-        db.query(Book).filter(Book.book_id % 2 == 0).update({"rating": random.uniform(0.0, 10.0)})
-    )
+    updated_count = db.query(Book).filter(Book.book_id % 2 == 0).update({"rating": random.uniform(0.0, 10.0)})
 
     db.commit()
     return {"count_of_updated_books": updated_count}
@@ -248,13 +245,13 @@ def update_even_book_rating(db: Session = Depends(get_db)):
 #group by (сгруппировать книги по округленному рейтингу)
 #рейтинг появился после миграции а значит он не нулл только в тех строчках, которые мы апдейтнули предыдущим запросом
 @app.get("/books/group_by_rounded_rating/")
-def group_books_by_rounded_rating(db: Session = Depends(get_db)):
+def group_books_by_rounded_rating(limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
     res = (
         db.query(
             func.floor(Book.rating),
             func.count(Book.book_id)
         )
-        .filter(Book.rating != None).group_by(func.floor(Book.rating)).all()
+        .filter(Book.rating != None).group_by(func.floor(Book.rating)).limit(limit).offset(offset).all()
     )
 
     return [
@@ -265,8 +262,8 @@ def group_books_by_rounded_rating(db: Session = Depends(get_db)):
 
 #регексп поиск по jsonb полю (его str части)
 @app.get("/issuances/search_regexp/", response_model=List[IssuanceOut])
-def search_issuances_by_notes_ilike(search_string: str, db: Session = Depends(get_db)):
+def search_issuances_by_notes_ilike(search_string: str, limit: int = Query(10, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
     query = db.query(Issuance).filter(
         Issuance.notes["review"].astext.ilike(f"%{search_string}%")
     )
-    return query.all()
+    return query.limit(limit).offset(offset).all()
