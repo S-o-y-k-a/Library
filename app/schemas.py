@@ -1,50 +1,41 @@
 from pydantic import BaseModel
-from typing import Optional
 from datetime import date
 
-class BookBase(BaseModel):
+class BookIn(BaseModel):
     name: str
     author: str
-    theme: Optional[str] = None
-    publisher: Optional[str] = None
+    theme: str
+    publisher: str
 
-class BookCreate(BookBase):
-    pass
 
-class Book(BookBase):
+class BookOut(BookIn):
     book_id: int
 
     class Config:
         orm_mode = True
 
 
-class ReaderBase(BaseModel):
+class ReaderIn(BaseModel):
     passport_number: str
     name: str
-    address: Optional[str] = None
-    phone_number: Optional[str] = None
-    mark: Optional[date] = None
+    address: str
+    phone_number: str
+    mark: date
 
-class ReaderCreate(ReaderBase):
-    pass
-
-class Reader(ReaderBase):
+class ReaderOut(ReaderIn):
     reader_id: int
 
     class Config:
         orm_mode = True
 
 
-class IssuanceBase(BaseModel):
+class IssuanceIn(BaseModel):
     issuance_date: date
-    date_of_actual_return: Optional[date] = None
+    date_of_actual_return: date
     book_id: int
     reader_id: int
 
-class IssuanceCreate(IssuanceBase):
-    pass
-
-class Issuance(IssuanceBase):
+class IssuanceOut(IssuanceIn):
     issuance_id: int
 
     class Config:
